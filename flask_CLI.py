@@ -33,20 +33,23 @@ class FlaskCLI(cmd.Cmd):
 
     def do_flaskapp(self, arg):
         args = arg.split()
-        for arg in args:
-            match arg:
-                case '-v' | '--version':
-                    print(__version__)
-                case 'create':
-                    create_folder_structure()
-                case 'custom':
-                    create_custom_structure()
-                case 'exit':
-                    exit()
-                case 'help':
-                    self.do_help(arg)
-                case _:
-                    print("Unknown command. Please type help to see available commands")
+        if len(args) < 2:
+            for arg in args:
+                match arg:
+                    case '-v' | '--version':
+                        print(__version__)
+                    case 'create':
+                        create_folder_structure()
+                    case 'custom':
+                        create_custom_structure()
+                    case 'exit':
+                        exit()
+                    case 'help':
+                        self.do_help(arg)
+                    case _:
+                        print("Unknown command. Please type help to see available commands.")
+        else:
+            print("Too many arguments. Type flaskapp help to see list of available commands.")
 
     def do_help(self, arg):
         print("Available commands: ", sep='\n')
