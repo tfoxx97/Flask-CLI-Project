@@ -1,25 +1,13 @@
-"""This CLI is designed to make setting up a Flask app much easier with the use of command prompts.
-Features include:
-- build base Flask template (includes routes, model dB setup, app config, utilities script, forms, etc.)
-- build custom Flask template
-    - specify what you're building
-    - schema of dB
-    - need blueprints?
-    - CLI will go in depth to create folder structure + scripts you'll need based on your specs for the app
-        you're building.
-- install needed dependencies for project
-    - provide requirements.txt file and it'll pip install for you.
-"""
-import cmd
+import cmd, os, subprocess, re
 from pathlib import Path
-import os
+from concurrent.futures import ThreadPoolExecutor
 
 __version__ = "1.0.0"
 
 available_cmds = {
     'create': "Create a basic folder structure for your flask app.",
     'custom': "Build on top of framework and add customization to flask app like additional scripts, blueprints, etc.",
-    'pip install': "Install dependencies to your app's virtual environment",
+    'install': "Install dependencies to your app's virtual environment",
     'exit': "Exit the CLI. Come back again soon!"
 }
 
@@ -42,6 +30,8 @@ class FlaskCLI(cmd.Cmd):
                         create_folder_structure()
                     case 'custom':
                         create_custom_structure()
+                    case 'install':
+                        install()
                     case 'exit':
                         exit()
                     case 'help':
@@ -138,6 +128,78 @@ def create_folder_structure(path='src'):
             print(f"File already exists: {path}")
 
     print("Done. Project folder structure created")
+
+def get_cwdirs():
+    dirs = os.listdir(os.getcwd())
+    for dir in dirs:
+        if dir.endswith('.py') or dir.startswith('.env'):
+            dirs.remove(dir)
+
+    return dirs
+
+def verify_pip_is_installed():
+    try:
+        pip_check = subprocess.run("pip --version", capture_output=True)
+        output = pip_check.stdout
+        pattern = rb"pip (\d{2,3}.\d{1,2}.\d{1,2})"
+        match1 = re.match(pattern, output)
+        if match1:
+            print("pip found on local machine.")
+            return True
+        else:
+            return False
+    except subprocess.CalledProcessError:
+        return False
+
+def create_venv():
+    #TODO: check if venv already exists
+    try:
+        subprocess.run("python -m venv .env")
+        print("Creating virtual environment...")
+    except (BaseException, Exception, subprocess.CalledProcessError) as e:
+        print(f"Error creating virtual environment: {type(e)}: {e}")
+
+    print("Creating venv finished.")
+
+def verfiy_requirements_txt():
+    '''Verify requirements.txt exists. If not, raise error. Verify file is not empty. If it is raise error.'''
+    dirs = get_cwdirs()
+
+    try:
+        filepath = os.path.join(os.getcwd(), dirs[1], 'requirements.txt')
+        if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
+            print("requirements.txt found.")
+            return True
+    except IndexError:
+        print("Project folder not found. Please create project folder before attempting pip install.")
+    except FileNotFoundError:
+        print("requirements.txt file not found. Please check project folder.")
+
+    return False
+
+def run_pip_install():
+    dirs = get_cwdirs()
+    filepath = os.path.join(os.getcwd(), dirs[1], 'requirements.txt')
+
+    try:
+        subprocess.run(f"pip install -r {filepath}")
+    except Exception as e:
+        print(f"Unexpected error: {type(e)}: {e}")
+
+    print("Installing dependencies process finished")
+
+def install():
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        tasks = [verify_pip_is_installed, create_venv, verfiy_requirements_txt, run_pip_install]
+        for i, task in enumerate(tasks, 1):
+            future = executor.submit(task)
+            try:
+                future.result()
+            except Exception as e:
+                print(f"Error: stopped at task {i}: {type(e)}: {e}")
+                break
+            else:
+                print("Task completed successfully.") 
 
 if __name__ == "__main__":
     FlaskCLI().cmdloop()
