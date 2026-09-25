@@ -2,7 +2,7 @@ import cmd, os, subprocess, re
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 available_cmds = {
     'create': "Create a basic folder structure for your flask app.",
